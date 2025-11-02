@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">My Groups</h3>
+  <a class="btn btn-primary" href="{% url 'trip:group_create' %}">+ New Group</a>
+</div>
+
+<div class="list-group">
+  {% for g in groups %}
+    <a class="list-group-item list-group-item-action" href="{% url 'trip:group_detail' g.pk %}">
+      {{ g.name }} <small class="text-muted">({{ g.member_count }} members)</small>
+    </a>
+  {% empty %}
+    <div class="alert alert-info">아직 가입한 그룹이 없어요.</div>
+  {% endfor %}
+</div>
+{% endblock %}

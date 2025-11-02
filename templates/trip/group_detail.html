@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">{{ group.name }}</h3>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'trip:group_top_places' group.pk %}">Top Places</a>
+    <a class="btn btn-primary" href="{% url 'trip:place_create' group.pk %}">+ Share Place</a>
+  </div>
+</div>
+
+<p class="text-muted">{{ group.description|default:"No description" }}</p>
+
+<h5 class="mt-4">Places</h5>
+<div class="list-group">
+  {% for p in group.places.all %}
+    <div class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>{{ p.name }}</strong>
+          {% if p.address %}<div class="small text-muted">{{ p.address }}</div>{% endif %}
+          {% if p.url %}<a href="{{ p.url }}" target="_blank" class="small">Link</a>{% endif %}
+          <div class="small text-muted">추천: {{ p.recommendations.count }}</div>
+        </div>
+        <div class="d-flex gap-2">
+          <form method="post" action="{% url 'trip:place_recommend' p.pk %}">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-success">Recommend</button>
+          </form>
+          {% if p.created_by_id == user.id %}
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'trip:place_update' p.pk %}">Edit</a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'trip:place_delete' p.pk %}">Delete</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="alert alert-info">아직 공유된 장소가 없습니다.</div>
+  {% endfor %}
+</div>
+{% endblock %}

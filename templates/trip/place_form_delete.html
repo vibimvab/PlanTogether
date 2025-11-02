@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block content %}
+<h4 class="mb-3">Delete Place</h4>
+<div class="alert alert-warning">정말로 "<strong>{{ object.name }}</strong>"를 삭제할까요?</div>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger" type="submit">Yes, delete</button>
+  <a class="btn btn-outline-secondary" href="javascript:history.back()">Cancel</a>
+</form>{% endblock %}
