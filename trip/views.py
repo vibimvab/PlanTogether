@@ -2,7 +2,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -12,10 +12,14 @@ from .forms import PlaceForm, GroupForm
 from .mixins import GroupMemberRequiredMixin
 
 
-# 그룹
-class GroupListView(LoginRequiredMixin, ListView):
+# 홈 페이지
+def index(request):
+    return render(request, "trip/index.html")
+
+# 프로필
+class UserProfileView(LoginRequiredMixin, ListView):
     model = TravelGroup
-    template_name = 'trip/group_list.html'
+    template_name = 'trip/group_place_list.html'
     context_object_name = 'groups'
 
     def get_queryset(self):
@@ -25,6 +29,7 @@ class GroupListView(LoginRequiredMixin, ListView):
                 .order_by('-created_at'))
 
 
+# 그룹
 class GroupCreateView(LoginRequiredMixin, CreateView):
     model = TravelGroup
     form_class = GroupForm
@@ -39,13 +44,25 @@ class GroupCreateView(LoginRequiredMixin, CreateView):
         return resp
 
 
-class GroupDetailView(LoginRequiredMixin, DetailView):
+class GroupPlaceListView(LoginRequiredMixin, DetailView):
     model = TravelGroup
-    template_name = 'trip/group_detail.html'
+    template_name = 'trip/group_place_list.html'
     context_object_name = 'group'
 
     def get_queryset(self):
         return TravelGroup.objects.prefetch_related('places__recommendations', 'members')
+
+    def dispatch(self, request, *args, **kwargs):
+        group = self.get_object()
+        if not group.members.filter(id=request.user.id).exists():
+            raise Http404("그룹 멤버만 볼 수 있습니다.")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class GroupMapView(LoginRequiredMixin, DetailView):
+    model = TravelGroup
+    template_name = 'trip/group_map.html'
+    context_object_name = 'group'
 
     def dispatch(self, request, *args, **kwargs):
         group = self.get_object()
@@ -123,3 +140,21 @@ class TopPlacesView(LoginRequiredMixin, DetailView):
                              .annotate(num_recs=Count('recommendations'))
                              .order_by('-num_recs', '-created_at')[:10])
         return ctx
+
+@login_required
+def group_places_json(request, group_pk):
+    group = get_object_or_404(TravelGroup, pk=group_pk)
+
+    # 권한 체크: 그룹 멤버만 볼 수 있게
+    if not group.members.filter(id=request.user.id).exists():
+        raise Http404("그룹 멤버만 볼 수 있습니다.")
+
+    places = group.places.values(
+        'id',
+        'name',
+        'latitude',
+        'longitude',
+        'category',  # 있다면
+    )
+
+    return JsonResponse(list(places), safe=False)

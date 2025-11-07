@@ -1,10 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="fw-bold mb-3">여행을 함께 계획하세요 🌍</h1>
+  <p class="lead mb-4">그룹을 만들고, 장소를 공유하고, 새로운 여행 아이디어를 받아보세요.</p>
+
+  {% if user.is_authenticated %}
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{% url 'trip:group_create' %}" class="btn btn-success btn-lg">새 그룹 만들기</a>
+      <a href="{% url 'trip:profile' %}" class="btn btn-outline-primary btn-lg">내 그룹 보기</a>
+    </div>
+  {% else %}
+    <p class="text-muted mb-4">로그인 후 그룹을 만들고 친구들과 여행을 계획해보세요.</p>
+    <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">로그인하기</a>
+  {% endif %}
+</div>
+
+<hr class="my-5">
+{% endblock %}
