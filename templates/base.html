@@ -9,9 +9,17 @@
 <body class="bg-light">
 <nav class="navbar navbar-dark bg-dark mb-4">
   <div class="container">
-    <a class="navbar-brand" href="{% url 'trip:group_list' %}">Trip Planner</a>
+    <a class="navbar-brand" href="{% url 'trip:index' %}">Trip Planner</a>
     {% if user.is_authenticated %}
-      <span class="navbar-text">Hi, {{ user.username }}</span>
+      <div class="d-flex gap-3 align-items-center">
+        <span class="navbar-text">Hi, {{ user.username }}</span>
+        <a class="btn btn-outline-light btn-sm" href="{% url 'accounts:logout' %}">로그아웃</a>
+      </div>
+    {% else %}
+      <div class="d-flex gap-3 align-items-center">
+        <a class="btn btn-outline-light btn-sm" href="{% url 'accounts:login' %}">로그인</a>
+        <a class="btn btn-light btn-sm" href="{% url 'accounts:signup' %}">회원가입</a>
+      </div>
     {% endif %}
   </div>
 </nav>

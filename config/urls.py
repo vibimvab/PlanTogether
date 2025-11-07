@@ -21,7 +21,7 @@ from trip.api import router as trip_router
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('trip.urls', namespace='trip')),
-    path('accounts/', include('django.contrib.auth.urls')),  # /login, /logout 등
+    path('accounts/', include('accounts.urls')),
     path('api/', include(trip_router.urls)),
 ]
 
