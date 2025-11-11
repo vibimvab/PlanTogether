@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
-from .models import TravelGroup, GroupMembership, Place, Recommendation
+from .models import TravelGroup, GroupMember, Place, Recommendation
 from .serializers import (
     TravelGroupSerializer, GroupMembershipSerializer,
     PlaceSerializer, RecommendationSerializer,
@@ -36,12 +36,12 @@ class TravelGroupViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         group = serializer.save(created_by=self.request.user)
-        GroupMembership.objects.get_or_create(group=group, user=self.request.user, defaults={'is_admin': True})
+        GroupMember.objects.get_or_create(group=group, user=self.request.user, defaults={'is_admin': True})
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def join(self, request, pk=None):
         group = self.get_object()
-        GroupMembership.objects.get_or_create(group=group, user=request.user)
+        GroupMember.objects.get_or_create(group=group, user=request.user)
         return Response({"detail": "joined"}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated, IsGroupMember])

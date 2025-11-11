@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import TravelGroup, GroupMembership, Place, Recommendation
+from .models import TravelGroup, GroupMember, Place, Recommendation
 from django.db.models import Count
 
 User = get_user_model()
@@ -14,7 +14,7 @@ class GroupMembershipSerializer(serializers.ModelSerializer):
     user = UserMiniSerializer(read_only=True)
 
     class Meta:
-        model = GroupMembership
+        model = GroupMember
         fields = ["id", "user", "is_admin", "joined_at"]
 
 class PlaceSerializer(serializers.ModelSerializer):

@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from .models import TravelGroup, GroupMembership, Place
+from .models import TravelGroup, GroupMember, Place
 
 class IsGroupMember(BasePermission):
     """

@@ -15,11 +15,19 @@ class TravelGroup(models.Model):
         related_name='created_travel_groups',
     )
 
-    # 멤버십: User <-> Group 다대다를 through로 관리
+    # User <-> Group 멤버십
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        through='GroupMembership',
+        through='GroupMember',
         related_name='travel_groups',
+        blank=True,
+    )
+
+    # Place <-> Group 멤버십
+    places = models.ManyToManyField(
+        'Place',
+        through='TravelGroupPlace',
+        related_name='groups',
         blank=True,
     )
 
@@ -34,16 +42,16 @@ class TravelGroup(models.Model):
         return self.members.count()
 
 
-class GroupMembership(models.Model):
+class GroupMember(models.Model):
     group = models.ForeignKey(
         TravelGroup,
         on_delete=models.CASCADE,
-        related_name='memberships',
+        related_name='member_links',
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='group_memberships',
+        related_name='group_links',
     )
     # 필요 시 권한/역할을 구분할 수 있도록 필드 확보
     is_admin = models.BooleanField(default=False)
@@ -67,6 +75,24 @@ class GroupMembership(models.Model):
 
 
 class Place(models.Model):
+    name = models.CharField(max_length=200)
+
+    # 위치 관련(옵션)
+    address = models.CharField(max_length=255, blank=True)
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['name', 'address']),
+        ]
+
+    @property
+    def recommendations_count(self) -> int:
+        return self.recommendations.count()
+
+
+class TravelGroupPlace(models.Model):
     class PlaceType(models.TextChoices):
         RESTAURANT = 'RESTAURANT', '식당'
         CAFE = 'CAFE', '카페'
@@ -77,11 +103,23 @@ class Place(models.Model):
         ACCOMMODATION = 'ACCOMMODATION', '숙소'
         OTHER = 'OTHER', '기타'
 
-    # 장소는 특정 그룹에 공유됨
-    group = models.ForeignKey(
+    place_type = models.CharField(
+        max_length=20,
+        choices=PlaceType.choices,
+        default=PlaceType.OTHER,
+        db_index=True,
+    )
+
+    travel_group = models.ForeignKey(
         TravelGroup,
         on_delete=models.CASCADE,
-        related_name='places',
+        related_name='place_links',
+    )
+
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.CASCADE,
+        related_name='travel_group_links',
     )
 
     # 작성자(공유한 사용자)
@@ -92,36 +130,20 @@ class Place(models.Model):
         related_name='places_created',
     )
 
-    name = models.CharField(max_length=200)
+    # 그룹 내에서 사용되는 장소 이름
+    nickname = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
-    place_type = models.CharField(
-        max_length=20,
-        choices=PlaceType.choices,
-        default=PlaceType.OTHER,
-        db_index=True,
-    )
-
-    # 위치 관련(옵션)
-    address = models.CharField(max_length=255, blank=True)
-    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-
-    url = models.URLField(blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [
-            models.Index(fields=['group', 'name']),
-            models.Index(fields=['group', 'place_type']),
+        constraints = [
+            models.UniqueConstraint(
+                fields=['travel_group', 'place'],
+                name='uq_membership_group_place',
+            ),
         ]
 
     def __str__(self) -> str:
-        return f'[{self.group.name}] {self.name}'
-
-    @property
-    def recommendations_count(self) -> int:
-        return self.recommendations.count()
+        return f'[{self.travel_group.name}] {self.name}'
 
 
 class Recommendation(models.Model):
