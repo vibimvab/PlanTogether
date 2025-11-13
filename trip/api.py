@@ -1,114 +1,102 @@
-from django.db.models import Count
-from rest_framework import viewsets, routers, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET, require_POST
+from django.db import transaction
+from rest_framework.routers import DefaultRouter
+import json
+import requests
 
-from .models import TravelGroup, GroupMember, Place, Recommendation
-from .serializers import (
-    TravelGroupSerializer, GroupMembershipSerializer,
-    PlaceSerializer, RecommendationSerializer,
-)
-from .permissions import IsGroupMember, IsPlaceOwnerOrReadOnly
-
-
-class TravelGroupViewSet(viewsets.ModelViewSet):
-    """
-    /api/groups/
-      - GET: 내가 속한 그룹 목록
-      - POST: 그룹 생성(자동 가입 + is_admin=True)
-    /api/groups/{id}/
-      - GET: 상세
-      - POST /join/: 그룹 가입
-      - GET  /top_places/: 추천수 상위 장소 10개
-    """
-    queryset = TravelGroup.objects.all().annotate(member_count=Count('members'))
-    serializer_class = TravelGroupSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        # 내가 멤버인 그룹만 보이게
-        return (TravelGroup.objects
-                .filter(members=self.request.user)
-                .annotate(member_count=Count('members'))
-                .order_by('-created_at'))
-
-    def perform_create(self, serializer):
-        group = serializer.save(created_by=self.request.user)
-        GroupMember.objects.get_or_create(group=group, user=self.request.user, defaults={'is_admin': True})
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
-    def join(self, request, pk=None):
-        group = self.get_object()
-        GroupMember.objects.get_or_create(group=group, user=request.user)
-        return Response({"detail": "joined"}, status=status.HTTP_200_OK)
-
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated, IsGroupMember])
-    def top_places(self, request, pk=None):
-        group = self.get_object()
-        places = (group.places
-                  .annotate(recommendations_count=Count('recommendations'))
-                  .order_by('-recommendations_count', '-created_at')[:10])
-        data = PlaceSerializer(places, many=True).data
-        return Response(data)
+from .models import TravelGroup, Place, TravelGroupPlace
+from .utils import is_group_member
 
 
-class PlaceViewSet(viewsets.ModelViewSet):
-    """
-    /api/places/
-      - GET: (옵션) ?group=<group_id> 로 필터
-      - POST: body에 {"group": <id>, "name": ...} 필수
-    /api/places/{id}/recommend/ : POST 토글
-    """
-    serializer_class = PlaceSerializer
-    permission_classes = [IsAuthenticated, IsGroupMember & IsPlaceOwnerOrReadOnly]
-    expects_group_on_create = True  # permissions에서 사용
+@login_required
+@require_GET
+def place_search_api(request):
+    query = request.GET.get("q", "").strip()
+    mode = (request.GET.get("mode") or "name").lower()
 
-    def get_queryset(self):
-        qs = Place.objects.all().select_related('group', 'created_by') \
-                 .annotate(recommendations_count=Count('recommendations'))
-        group_id = self.request.query_params.get('group')
-        if group_id:
-            qs = qs.filter(group_id=group_id)
-        # 내가 멤버인 그룹의 Place만
-        return qs.filter(group__members=self.request.user).order_by('-created_at')
+    # 쿼리가 없을 경우
+    if not query:
+        return JsonResponse({"results": []})
 
-    def perform_create(self, serializer):
-        group_id = self.request.data.get('group')
-        group = get_object_or_404(TravelGroup, pk=group_id)
-        # 멤버만 생성 가능
-        if not group.members.filter(id=self.request.user.id).exists():
-            return Response({"detail": "Not a group member"}, status=403)
-        serializer.save(group=group, created_by=self.request_user)
+    exists = True
+    if mode == "address":
+        # 주소로 검색
+        places = Place.objects.filter(address__icontains=query)
+    elif mode == "name":
+        # 이름으로 검색
+        places = Place.objects.filter(name__icontains=query)
+    else:
+        return JsonResponse({"error": "잘못된 검색 방식입니다. 장소 이름 또는 주소로 검색 옵션 중 하나를 선택해주세요"})
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsGroupMember])
-    def recommend(self, request, pk=None):
-        place = self.get_object()
-        # 멤버 확인은 IsGroupMember가 처리
-        rec, created = Recommendation.objects.get_or_create(place=place, user=request.user)
-        if not created:
-            rec.delete()
-            return Response({"detail": "unrecommended", "count": place.recommendations.count()})
-        return Response({"detail": "recommended", "count": place.recommendations.count()})
+    place = places.first()
+    if not place:
+        exists = False
+        # Kakao maps api 사용하여 위치 정보 return
+        pass
 
-
-class RecommendationViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    필요 시 조회용. 보통은 Place.recommend 액션으로 충분.
-    """
-    serializer_class = RecommendationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        # 내가 멤버인 그룹의 추천만
-        return Recommendation.objects.filter(place__group__members=self.request.user) \
-                                     .select_related('place', 'user') \
-                                     .order_by('-created_at')
+    return JsonResponse({
+        "exists" : exists,
+        "place": {
+            "id": place.id,
+            "name": place.name,
+            "address": place.address,
+            "lat": place.lat,
+            "lng": place.lng,
+        }
+    })
 
 
-# 라우터 등록
-router = routers.DefaultRouter()
-router.register(r'groups', TravelGroupViewSet, basename='group')
-router.register(r'places', PlaceViewSet, basename='place')
-router.register(r'recommendations', RecommendationViewSet, basename='recommendation')
+@login_required
+@require_POST
+@transaction.atomic
+def group_place_create_api(request, group_pk: int):
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "잘못된 JSON 형식입니다."}, status=400)
+
+    group = get_object_or_404(TravelGroup, pk=group_pk)
+
+    place_data = payload.get("place") or {}
+    place_exists = place_data.get("exists")  # place가 이미 존재하는지
+
+    place_id = place_data.get("id")
+    place_name = place_data.get("name")
+    place_address = place_data.get("address")
+    lat = place_data.get("lat")
+    lng = place_data.get("lng")
+
+    place_type = payload.get("place_type")  # dropdown 값
+    description = payload.get("description")  # 텍스트
+
+    if not place_name or not place_address or lat is None or lng is None:
+        return JsonResponse({"success": False, "error": "장소 정보가 부족합니다."}, status=400)
+
+    # 1) 기존 Place 존재하는 경우
+    if place_exists:
+        place = get_object_or_404(Place, pk=place_id)
+
+    # 2) 없는 경우: 새 Place 생성
+    else:
+        place, created = Place.objects.create(
+            name=place_name,
+            address=place_address,
+            defaults={"latitude": lat, "longitude": lng},
+        )
+
+    # TravelGroupPlace 생성
+    tgp = TravelGroupPlace.objects.create(
+        group=group,
+        place=place,
+        place_type=place_type,
+        description=description,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "travel_group_place_id": tgp.id,
+        "redirect_url": f"/trip/groups/{group_pk}/",
+    })
