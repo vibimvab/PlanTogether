@@ -1,4 +1,6 @@
 let currentPlace = null;  // { id?, name, address, lat, lng }
+let map = null;           // Kakao Map 객체
+let marker = null;
 
 function getSelectedMode() {
   const radios = document.querySelectorAll('input[name="mode"]');
@@ -6,6 +8,25 @@ function getSelectedMode() {
     if (r.checked) return r.value;
   }
   return "name";
+}
+
+function initMap() {
+  const container = document.getElementById('map');
+  if (!container) return;
+
+  const center = new kakao.maps.LatLng(37.5665, 126.9780);  // 기본: 서울 시청 근처
+  const options = {
+    center: center,
+    level: 3,
+  };
+
+  map = new kakao.maps.Map(container, options);
+
+  // 기본 마커(초기에는 센터에 찍어 둠)
+  marker = new kakao.maps.Marker({
+    position: center,
+    map: map,
+  });
 }
 
 async function searchPlace() {
@@ -53,6 +74,11 @@ async function searchPlace() {
   }
 
   // TODO: Kakao 지도에 currentPlace.lat/lng 마커 업데이트
+  if (map && marker && currentPlace.lat != null && currentPlace.lng != null) {
+    const pos = new kakao.maps.LatLng(currentPlace.lat, currentPlace.lng);
+    marker.setPosition(pos);
+    map.setCenter(pos);
+  }
   // renderMap(currentPlace.lat, currentPlace.lng);
 }
 
@@ -102,4 +128,5 @@ async function submitPlace() {
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-btn").addEventListener("click", searchPlace);
   document.getElementById("submit-btn").addEventListener("click", submitPlace);
+  initMap();
 });
