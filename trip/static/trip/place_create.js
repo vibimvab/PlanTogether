@@ -1,13 +1,7 @@
 // ===== 전역 상태 =====
 let map, ps, geocoder, infowindow;
 let markers = [];
-let currentPlace = null; // {id?, name, address, lat, lng, phone?, url?, category?}
-
-function getSelectedMode() {
-  const radios = document.querySelectorAll('input[name="mode"]');
-  for (const r of radios) if (r.checked) return r.value;
-  return "name";
-}
+let currentPlace = null;
 
 // ===== 지도 초기화 =====
 function initMap() {
@@ -57,7 +51,6 @@ function openInfo(marker, title) {
 // ===== 검색 (브라우저에서 Kakao 호출) =====
 async function searchPlace() {
   const q = document.getElementById("place-query").value.trim();
-  const mode = getSelectedMode();
   const resultDiv = document.getElementById("search-result");
 
   clearListAndMarkers();
@@ -70,34 +63,17 @@ async function searchPlace() {
   currentPlace = null;
 
   // 이름 검색: Places.keywordSearch
-  if (mode === "name") {
-    ps.keywordSearch(q, (data, status, pagination) => {
-      if (status === kakao.maps.services.Status.OK) {
-        renderPlaceResults(data, pagination);
-      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-        resultDiv.textContent = "검색 결과가 존재하지 않습니다.";
-      } else {
-        resultDiv.textContent = "검색 중 오류가 발생했습니다.";
-      }
-    },
-    { size: 5 }
-    );
-    return;
-  }
-
-  // 주소 검색: Geocoder.addressSearch
-  if (mode === "address") {
-    geocoder.addressSearch(q, (data, status) => {
-      if (status === kakao.maps.services.Status.OK && data.length) {
-        renderAddressResults(data.slice(0, 5));
-      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-        resultDiv.textContent = "해당 주소를 찾을 수 없습니다.";
-      } else {
-        console.log(status);
-        resultDiv.textContent = "주소 검색 중 오류가 발생했습니다.";
-      }
-    });
-  }
+  ps.keywordSearch(q, (data, status, pagination) => {
+    if (status === kakao.maps.services.Status.OK) {
+      renderPlaceResults(data, pagination);
+    } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+      resultDiv.textContent = "검색 결과가 존재하지 않습니다.";
+    } else {
+      resultDiv.textContent = "검색 중 오류가 발생했습니다.";
+    }
+  },
+  { size: 5 }
+  );
 }
 
 // ===== 결과 렌더링 (장소) =====
@@ -137,8 +113,9 @@ function renderPlaceResults(places, pagination) {
 
     // 선택 버튼 → currentPlace 설정
     li.querySelector('.pick-btn').addEventListener('click', () => {
+      console.log("선택됨:", currentPlace);
+
       currentPlace = {
-        id: null, // 아직 DB에 없는 신규
         name: p.place_name,
         address: p.road_address_name || p.address_name || "",
         lat: Number(p.y),
@@ -184,57 +161,6 @@ function renderPagination(pagination, container) {
     frag.appendChild(a);
   }
   container.appendChild(frag);
-}
-
-// ===== 결과 렌더링 (주소) =====
-function renderAddressResults(items) {
-  const listEl = document.getElementById('placesList');
-  const bounds = new kakao.maps.LatLngBounds();
-
-  items.forEach((a, i) => {
-    const y = Number(a.y), x = Number(a.x);
-    const name = a.road_address?.building_name || a.road_address?.address_name || a.address?.address_name || "주소";
-    const addr = a.road_address?.address_name || a.address?.address_name || "";
-
-    const pos = new kakao.maps.LatLng(y, x);
-    const marker = addMarker(pos, i);
-    bounds.extend(pos);
-
-    const li = document.createElement('li');
-    li.className = 'list-group-item d-flex justify-content-between align-items-start';
-    li.innerHTML = `
-      <div class="ms-2 me-auto">
-        <div class="fw-bold">${name}</div>
-        <div>${addr}</div>
-      </div>
-      <div>
-        <button class="btn btn-sm btn-primary pick-btn">선택</button>
-      </div>
-    `;
-
-    li.addEventListener('mouseover', () => openInfo(marker, name));
-    li.addEventListener('mouseout', () => infowindow.close());
-    kakao.maps.event.addListener(marker, 'mouseover', () => openInfo(marker, name));
-    kakao.maps.event.addListener(marker, 'mouseout', () => infowindow.close());
-    kakao.maps.event.addListener(marker, 'click', () => openInfo(marker, name));
-
-    li.querySelector('.pick-btn').addEventListener('click', () => {
-      currentPlace = {
-        name,
-        address: addr,
-        lat: y,
-        lng: x,
-      };
-      console.log(currentPlace);
-      map.setCenter(pos);
-      openInfo(marker, name);
-      document.getElementById('search-result').textContent = `선택됨: ${name}`;
-    });
-
-    listEl.appendChild(li);
-  });
-
-  map.setBounds(bounds);
 }
 
 // ===== 저장(선택된 1건만 Django로 POST) =====
