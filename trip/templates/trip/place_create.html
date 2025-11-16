@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block header %}
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2ed61d5271268c9c3f1b1c9cdcaee9f9"></script>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2ed61d5271268c9c3f1b1c9cdcaee9f9&libraries=services"></script>
 {% endblock %}
 
 {% block content %}
@@ -47,6 +47,8 @@
           <div class="col-md-6 mb-3">
             <h6 class="mb-2">검색 결과</h6>
             <div id="search-result" class="small text-muted"></div>
+            <ul id="placesList" class="list-group small"></ul>
+            <div id="pagination" class="mt-2"></div>
           </div>
         </div>
 
