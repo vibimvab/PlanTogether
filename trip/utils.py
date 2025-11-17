@@ -1,3 +1,13 @@
+from .models import GroupMember, TravelGroup
+
+
+def is_group_member(user, group: TravelGroup) -> bool:
+    """
+        해당 유저가 그룹에 속해 있는지 확인
+    """
+    return GroupMember.objects.filter(group=group, user=user).exists()
+
+
 def build_choices(results):
     choices = []
     for r in results:

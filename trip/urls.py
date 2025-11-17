@@ -27,7 +27,6 @@ urlpatterns = [
     path('groups/<int:group_pk>/places/json/', views.group_places_json, name='group_places_json'),
 
     # 장소 생성 API
-    path('api/places/search/', api.place_search_api, name="place_search_api"),
     path('api/groups/<int:group_pk>/places_create/', api.group_place_create_api, name="place_create_api"),
 
     # 추천 토글

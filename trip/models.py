@@ -75,16 +75,24 @@ class GroupMember(models.Model):
 
 
 class Place(models.Model):
+    id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=200)
-
-    # 위치 관련(옵션)
     address = models.CharField(max_length=255, blank=True)
-    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lat = models.DecimalField(max_digits=9, decimal_places=6)
+    lng = models.DecimalField(max_digits=9, decimal_places=6)
+    phone = models.CharField(max_length=15, blank=True)
+    url = models.URLField(blank=True)
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id'],
+                name='uq_place_id',
+            ),
+        ]
         indexes = [
-            models.Index(fields=['name', 'address']),
+            models.Index(fields=['name']),
+            models.Index(fields=['id']),
         ]
 
     @property

@@ -53,13 +53,25 @@ class GroupPlaceListView(LoginRequiredMixin, DetailView):
     context_object_name = 'group'
 
     def get_queryset(self):
-        return TravelGroup.objects.prefetch_related('places__recommendations', 'members')
+        # 그룹 + 그 그룹의 places, recommendations, members까지 한 번에 prefetch
+        return (
+            TravelGroup.objects
+            .prefetch_related('places__recommendations', 'members')
+        )
 
     def dispatch(self, request, *args, **kwargs):
         group = self.get_object()
         if not group.members.filter(id=request.user.id).exists():
             raise Http404("그룹 멤버만 볼 수 있습니다.")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        group = self.object
+
+        # 이 그룹에 속한 장소들
+        context["places"] = group.places.all()
+        return context
 
 
 class GroupMapView(LoginRequiredMixin, DetailView):

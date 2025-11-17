@@ -113,16 +113,14 @@ function renderPlaceResults(places, pagination) {
 
     // 선택 버튼 → currentPlace 설정
     li.querySelector('.pick-btn').addEventListener('click', () => {
-      console.log("선택됨:", currentPlace);
-
       currentPlace = {
+        id: p.id,
         name: p.place_name,
         address: p.road_address_name || p.address_name || "",
         lat: Number(p.y),
         lng: Number(p.x),
-        phone: p.phone || null,
-        url: p.place_url || null,
-        category: p.category_group_code || null,
+        phone: p.phone || "",
+        url: p.place_url || "",
       };
       // 지도 중심/마커 강조
       map.setCenter(pos);
@@ -197,6 +195,7 @@ async function submitPlace() {
 
     if (!resp.ok || !data.success) {
       errorDiv.textContent = data.error || "저장 중 오류가 발생했습니다.";
+      console.log(data.error);
       return;
     }
 
@@ -207,7 +206,6 @@ async function submitPlace() {
     }
   } catch (e) {
     errorDiv.textContent = "네트워크 오류가 발생했습니다.";
-    console.log(e);
   }
 }
 
