@@ -21,7 +21,7 @@ urlpatterns = [
     # 장소 (그룹 내부)
     path('groups/<int:group_pk>/places/new/', views.create_place, name='place_create'),
     # path('places/<int:pk>/edit/', views.PlaceUpdateView.as_view(), name='place_update'),
-    path('places/<int:pk>/delete/', views.PlaceDeleteView.as_view(), name='place_delete'),
+    path('groups/<int:pk>/delete/', views.delete_place, name='place_delete'),
 
     # 장소 리스트 API
     path('groups/<int:group_pk>/places/json/', api.group_places_json, name='group_places_json'),
