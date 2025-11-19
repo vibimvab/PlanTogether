@@ -64,8 +64,9 @@
         </div>
 
         <!-- 저장 버튼 -->
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-end gap-2">
           <button class="btn btn-primary" id="submit-btn" type="button">저장</button>
+          <a class="btn btn-outline-secondary" href={% url 'trip:group_place_list' group.pk %} type="button">취소</a>
         </div>
 
         <!-- 에러 메시지 -->
