@@ -30,6 +30,10 @@ def group_place_create_api(request, group_pk: int):
     try:    # DB에 이미 존재하는 장소인지 검색
         place = Place.objects.get(pk=place_id)
 
+        if TravelGroupPlace.objects.filter(travel_group=group, place=place).exists():
+            return JsonResponse({"success": False, "error": "이미 이 그룹에 같은 장소가 저장되어 있습니다."}, status=400)
+
+
     except Place.DoesNotExist:  # 존재하지 않을 경우 새로 생성
         place_name = place_data.get("name")
         place_address = place_data.get("address")
