@@ -105,6 +105,11 @@ class GroupMapView(GroupDetailView):
         return context
 
 
+class PlaceUpdateView(GroupMemberRequiredMixin, UpdateView):
+    model = TravelGroupPlace
+
+
+
 # 장소 삭제
 @login_required
 def delete_place(request, pk):
@@ -132,43 +137,3 @@ def join_group(request, pk):
 def create_place(request, group_pk):
     group = get_object_or_404(TravelGroup, pk=group_pk)
     return render(request, "trip/place_create.html", {"group": group})
-
-
-# class PlaceUpdateView(GroupMemberRequiredMixin, UpdateView):
-#     model = Place
-#     form_class = PlaceForm
-#     template_name = 'trip/place_form.html'
-#
-#     def get_success_url(self):
-#         return reverse('trip:group_detail', kwargs={'pk': self.object.group_id})
-
-
-# 추천 토글
-@login_required
-def toggle_recommendation(request, pk):
-    place = get_object_or_404(Place, pk=pk)
-    group = place.group
-    if not group.members.filter(id=request.user.id).exists():
-        raise Http404("그룹 멤버만 추천할 수 있습니다.")
-
-    rec, created = Recommendation.objects.get_or_create(place=place, user=request.user)
-    if not created:
-        rec.delete()  # 이미 있으면 취소(토글)
-    return redirect('trip:group_detail', pk=group.pk)
-
-
-# Top N 장소 뷰
-class TopPlacesView(LoginRequiredMixin, DetailView):
-    model = TravelGroup
-    template_name = 'trip/group_top_places.html'
-    context_object_name = 'group'
-
-    def get_queryset(self):
-        return TravelGroup.objects.prefetch_related('places__recommendations')
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['top_places'] = (self.object.places
-                             .annotate(num_recs=Count('recommendations'))
-                             .order_by('-num_recs', '-created_at')[:10])
-        return ctx
