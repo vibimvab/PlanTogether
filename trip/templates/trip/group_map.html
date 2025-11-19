@@ -9,6 +9,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3 class="m-0">{{ group.name }}</h3>
   <div class="d-flex gap-2">
+    <a class="btn btn-primary">초대코드 생성</a>
     <a class="btn btn-primary" href="{% url 'trip:group_place_list' group.pk %}">리스트로 보기</a>
     <a class="btn btn-primary" href="{% url 'trip:place_create' group.pk %}">+ New Place</a>
   </div>
