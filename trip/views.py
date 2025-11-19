@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
+import config.settings as settings
 from .models import TravelGroup, GroupMember, Place, TravelGroupPlace, Recommendation
 from .forms import GroupForm, PlaceNameQueryForm, PlaceAddressQueryForm, PlaceSearchResultForm, TravelGroupPlaceForm
 from .mixins import GroupMemberRequiredMixin
@@ -47,16 +48,17 @@ class GroupCreateView(LoginRequiredMixin, CreateView):
         return resp
 
 
-class GroupPlaceListView(LoginRequiredMixin, DetailView):
+class GroupDetailView(LoginRequiredMixin, DetailView):
     model = TravelGroup
-    template_name = 'trip/group_place_list.html'
     context_object_name = 'group'
 
     def get_queryset(self):
-        # 그룹 + 그 그룹의 places, recommendations, members까지 한 번에 prefetch
         return (
             TravelGroup.objects
-            .prefetch_related('places__recommendations', 'members')
+            .prefetch_related(
+                "members",
+                "place_links__place",    # TravelGroupPlace + Place까지 한 번에
+            )
         )
 
     def dispatch(self, request, *args, **kwargs):
@@ -64,6 +66,10 @@ class GroupPlaceListView(LoginRequiredMixin, DetailView):
         if not group.members.filter(id=request.user.id).exists():
             raise Http404("그룹 멤버만 볼 수 있습니다.")
         return super().dispatch(request, *args, **kwargs)
+
+
+class GroupPlaceListView(GroupDetailView):
+    template_name = 'trip/group_place_list.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -74,16 +80,25 @@ class GroupPlaceListView(LoginRequiredMixin, DetailView):
         return context
 
 
-class GroupMapView(LoginRequiredMixin, DetailView):
-    model = TravelGroup
+class GroupMapView(GroupDetailView):
     template_name = 'trip/group_map.html'
-    context_object_name = 'group'
 
-    def dispatch(self, request, *args, **kwargs):
-        group = self.get_object()
-        if not group.members.filter(id=request.user.id).exists():
-            raise Http404("그룹 멤버만 볼 수 있습니다.")
-        return super().dispatch(request, *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        group = self.object
+
+        ctx["KAKAO_JAVASCRIPT_KEY"] = settings.KAKAO_JAVASCRIPT_KEY
+
+        # JS에서 사용할 JSON API URL도 같이 넘겨주고 싶다면
+        ctx["places_json_url"] = reverse(
+            "trip:group_places_json",
+            kwargs={"group_pk": group.pk},
+        )
+
+        # 필요하다면 places도 템플릿에서 직접 쓸 수 있게
+        ctx["places"] = group.place_links.select_related("place")
+
+        return ctx
 
 
 @login_required
@@ -146,21 +161,3 @@ class TopPlacesView(LoginRequiredMixin, DetailView):
                              .annotate(num_recs=Count('recommendations'))
                              .order_by('-num_recs', '-created_at')[:10])
         return ctx
-
-@login_required
-def group_places_json(request, group_pk):
-    group = get_object_or_404(TravelGroup, pk=group_pk)
-
-    # 권한 체크: 그룹 멤버만 볼 수 있게
-    if not group.members.filter(id=request.user.id).exists():
-        raise Http404("그룹 멤버만 볼 수 있습니다.")
-
-    places = group.places.values(
-        'id',
-        'name',
-        'latitude',
-        'longitude',
-        'category',  # 있다면
-    )
-
-    return JsonResponse(list(places), safe=False)

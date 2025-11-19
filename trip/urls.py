@@ -24,7 +24,7 @@ urlpatterns = [
     path('places/<int:pk>/delete/', views.PlaceDeleteView.as_view(), name='place_delete'),
 
     # 장소 리스트 API
-    path('groups/<int:group_pk>/places/json/', views.group_places_json, name='group_places_json'),
+    path('groups/<int:group_pk>/places/json/', api.group_places_json, name='group_places_json'),
 
     # 장소 생성 API
     path('api/groups/<int:group_pk>/places_create/', api.group_place_create_api, name="place_create_api"),

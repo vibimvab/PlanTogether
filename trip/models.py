@@ -151,7 +151,7 @@ class TravelGroupPlace(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f'[{self.travel_group.name}] {self.name}'
+        return f'[{self.travel_group.name}] {self.place.name}'
 
 
 class Recommendation(models.Model):

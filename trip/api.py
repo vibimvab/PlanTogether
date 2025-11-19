@@ -65,3 +65,27 @@ def group_place_create_api(request, group_pk: int):
         "success": True,
         "redirect_url": f"/groups/{group_pk}/",
     })
+
+
+def group_places_json(request, group_pk):
+    links = (
+        TravelGroupPlace.objects
+        .select_related('place')
+        .filter(travel_group_id=group_pk)
+    )
+
+    data = []
+    for link in links:
+        p = link.place
+        data.append({
+            "link_id": link.id,
+            "place_id": p.id,
+            "name": link.nickname or p.name,
+            "address": p.address,
+            "lat": p.lat,
+            "lng": p.lng,
+            "place_type": link.place_type,
+            "description": link.description,
+        })
+
+    return JsonResponse({"places": data})
