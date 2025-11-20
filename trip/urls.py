@@ -20,7 +20,7 @@ urlpatterns = [
 
     # 장소 (그룹 내부)
     path('groups/<int:group_pk>/places/new/', views.create_place, name='place_create'),
-    # path('places/<int:pk>/edit/', views.PlaceUpdateView.as_view(), name='place_update'),
+    path('group/place_edit/<int:place_pk>', views.PlaceUpdateView.as_view(), name='place_update'),
     path('groups/<int:pk>/delete/', views.delete_place, name='place_delete'),
 
     # 장소 리스트 API
@@ -29,9 +29,6 @@ urlpatterns = [
     # 장소 생성 API
     path('api/groups/<int:group_pk>/places_create/', api.group_place_create_api, name="place_create_api"),
 
-    # 추천 토글
-    path('places/<int:pk>/recommend/', views.toggle_recommendation, name='place_recommend'),
-
-    # Top N
-    path('groups/<int:pk>/top/', views.TopPlacesView.as_view(), name='group_top_places'),
+    # 장소 수정 API
+    path('api/edit_place_link/<int:place_link_pk>/', api.group_place_update_api, name='place_link_update_api'),
 ]

@@ -3,9 +3,8 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbid
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 from django.db import transaction
-from rest_framework.routers import DefaultRouter
+from django.urls import reverse
 import json
-import requests
 
 from .models import TravelGroup, Place, TravelGroupPlace
 from .utils import is_group_member
@@ -60,6 +59,7 @@ def group_place_create_api(request, group_pk: int):
     TravelGroupPlace.objects.create(
         travel_group=group,
         place=place,
+        nickname=place_data.get("name"),
         place_type=place_type,
         description=description,
         created_by=request.user,
@@ -68,6 +68,32 @@ def group_place_create_api(request, group_pk: int):
     return JsonResponse({
         "success": True,
         "redirect_url": f"/groups/{group_pk}/",
+    })
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def group_place_update_api(request, place_link_pk: int):
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "잘못된 JSON 형식입니다."}, status=400)
+
+    place_link = get_object_or_404(TravelGroupPlace, pk=place_link_pk)
+
+    nickname = payload.get("nickname")
+    place_type = payload.get("place_type")
+    description = payload.get("description")
+
+    place_link.nickname = nickname
+    place_link.place_type = place_type
+    place_link.description = description
+    place_link.save()
+
+    return JsonResponse({
+        "success": True,
+        "redirect_url": reverse("trip:group_place_list", kwargs={"pk": place_link.travel_group.pk}),
     })
 
 

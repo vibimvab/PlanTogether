@@ -105,10 +105,18 @@ class GroupMapView(GroupDetailView):
         return context
 
 
-class PlaceUpdateView(GroupMemberRequiredMixin, UpdateView):
+class PlaceUpdateView(LoginRequiredMixin, DetailView):
     model = TravelGroupPlace
+    template_name = "trip/place_update.html"
+    pk_url_kwarg = "place_pk"
 
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        place_link = self.object
+        context["place_link"] = place_link
+        context["group"] = place_link.travel_group
+        context["place"] = place_link.place
+        return context
 
 # 장소 삭제
 @login_required
