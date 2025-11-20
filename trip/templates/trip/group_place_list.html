@@ -13,7 +13,7 @@
   {% for place_link in place_links %}
     <div class="list-group-item d-flex justify-content-between align-items-start">
       <div class="ms-2 me-auto">
-        <div class="fw-bold">{{ place_link.place.name }}</div>
+        <div class="fw-bold">{{ place_link.nickname|default:place_link.place.name }}</div>
         {% if place_link.place.address %}
           <div class="text-muted small">{{ place_link.place.address }}</div>
         {% endif %}
@@ -22,6 +22,7 @@
         {% if place_link.place_type %}
           <span class="badge bg-primary rounded-pill">{{ place_link.place_type }}</span>
         {% endif %}
+        <a class="btn btn-sm btn-outline-primary btn-lg" href="{% url 'trip:place_update' place_link.pk %}">수정</a>
         <form action="{% url 'trip:place_delete' group.pk %}" method="post" style="display:inline;">
           {% csrf_token %}
           <button class="btn btn-sm btn-outline-danger" type="submit">삭제</button>
