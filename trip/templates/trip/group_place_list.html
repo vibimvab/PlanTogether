@@ -13,7 +13,10 @@
   {% for place_link in place_links %}
     <div class="list-group-item d-flex justify-content-between align-items-start">
       <div class="ms-2 me-auto">
-        <div class="fw-bold">{{ place_link.nickname|default:place_link.place.name }}</div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="fw-bold">{{ place_link.place.name }}</div>
+            <div class="text-muted light-blue">{{ place_link.nickname }}</div>
+        </div>
         {% if place_link.place.address %}
           <div class="text-muted small">{{ place_link.place.address }}</div>
         {% endif %}
