@@ -26,7 +26,7 @@
           <span class="badge bg-primary rounded-pill">{{ place_link.place_type }}</span>
         {% endif %}
         <a class="btn btn-sm btn-outline-primary btn-lg" href="{% url 'trip:place_update' place_link.pk %}">수정</a>
-        <form action="{% url 'trip:place_delete' group.pk %}" method="post" style="display:inline;">
+        <form action="{% url 'trip:place_delete' place_link.pk %}" method="post" style="display:inline;">
           {% csrf_token %}
           <button class="btn btn-sm btn-outline-danger" type="submit">삭제</button>
         </form>
